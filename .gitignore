@@ -1,0 +1,11 @@
+*__pycache__*
+llama.cpp/
+Qwen3-0.6B/
+Qwen3-1.7B/
+Youtu-LLM-2B/
+qwen3-0.6b-gguf/
+qwen3-1.7b-gguf/
+youtu-llm-2b-gguf/
+!qwen3-0.6b-gguf/README.md
+!qwen3-1.7b-gguf/README.md
+!youtu-llm-2b-gguf/README.md

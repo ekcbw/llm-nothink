@@ -1,0 +1,32 @@
+#!/usr/bin/bash
+
+finally() {
+    trap - ERR EXIT
+    if [ -f Qwen3-0.6B/model.safetensors.bak ]; then
+        if [ -f Qwen3-0.6B/model.safetensors ]; then rm Qwen3-0.6B/model.safetensors; fi
+        mv Qwen3-0.6B/model.safetensors.bak Qwen3-0.6B/model.safetensors
+    fi
+}
+
+trap finally ERR EXIT INT TERM
+
+set -e
+if ! [ -d Qwen3-0.6B ]; then
+    git clone https://huggingface.co/Qwen/Qwen3-0.6B --no-depth
+fi
+if ! [ -d llama.cpp ]; then
+    git clone https://github.com/ggml-org/llama.cpp --no-depth
+fi
+
+cp Qwen3-0.6B/model.safetensors Qwen3-0.6B/model.safetensors.bak
+python tools/embedding_modifier.py Qwen3-0.6B/model.safetensors lm_head[151668]=lm_head[151667] \
+lm_head[151667]=zero --inplace
+python llama.cpp/convert_hf_to_gguf.py Qwen3-0.6B --outfile qwen-bf16.gguf --outtype bf16
+
+quant_precisions=("iq3_xs" "iq4_nl" "iq4_xs" "q3_k_l" "q4_k_m" "q5_k_m" "q6_k" "q8_0")
+mkdir -p qwen3-0.6b-gguf
+for prec in "${quant_precisions[@]}"; do
+    # requires llama-quantize command in PATH
+    llama-quantize qwen-bf16.gguf qwen3-0.6b-gguf/qwen3-0.6b-$prec.gguf $prec
+done
+rm qwen-bf16.gguf

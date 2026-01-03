@@ -1,0 +1,36 @@
+#!/usr/bin/bash
+# expreimental
+
+finally() {
+    trap - ERR EXIT
+    if [ -f Youtu-LLM-2B/model.safetensors.bak ]; then
+        if [ -f Youtu-LLM-2B/model.safetensors ]; then
+            rm Youtu-LLM-2B/model.safetensors
+        fi
+        mv Youtu-LLM-2B/model.safetensors.bak Youtu-LLM-2B/model.safetensors
+    fi
+}
+
+trap finally ERR EXIT INT TERM
+
+set -e
+if ! [ -d Youtu-LLM-2B ]; then
+    git clone https://huggingface.co/tencent/Youtu-LLM-2B --no-depth
+fi
+if ! [ -d llama.cpp ]; then
+    git clone https://github.com/ggml-org/llama.cpp --no-depth
+fi
+
+cp Youtu-LLM-2B/model.safetensors Youtu-LLM-2B/model.safetensors.bak
+python tools/embedding_modifier.py Youtu-LLM-2B/model.safetensors lm_head[128228]=lm_head[128227] \
+lm_head[128227]=zero --inplace
+python tools/json_modifier.py Youtu-LLM-2B/config.json 'data["tie_word_embeddings"]=False'
+python llama.cpp/convert_hf_to_gguf.py Youtu-LLM-2B --outfile youtu-bf16.gguf --outtype bf16
+
+quant_precisions=("iq3_xs" "iq4_nl" "iq4_xs" "q3_k_l" "q4_k_m" "q5_k_m" "q6_k" "q8_0")
+mkdir -p youtu-llm-2b-gguf
+for prec in "${quant_precisions[@]}"; do
+    # requires llama-quantize command in PATH
+    llama-quantize youtu-bf16.gguf youtu-llm-2b-gguf/youtu-llm-2b-$prec.gguf $prec
+done
+rm youtu-bf16.gguf

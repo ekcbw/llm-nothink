@@ -1,0 +1,18 @@
+A tool for creating non-reasoning models from existing reasoning models.
+
+## Usage
+
+1. Use `git clone` and `pip` to prepare the environment:
+```bash
+git clone https://github.com/ekcbw/llm-nothink
+cd llm-nothink
+pip install -r tools/requirements.txt
+```
+2. Run build scripts:
+```bash
+./build-qwen3-0.6b # Build the qwen3-0.6b GGUF model
+# or
+./build-qwen3-1.7b
+./build-youtu-2b
+```
+For Windows, you may use Git Bash or WSL to run these scripts.
